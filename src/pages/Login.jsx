@@ -57,11 +57,7 @@ export default function Login() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-
-        <p style={{ marginTop: 24, fontSize: '.8rem', color: '#9CA3AF', textAlign: 'center' }}>
-          Admin: admin@boticario.com / admin123<br />
-          Loja: loja@boticario.com / loja123
-        </p>
+        
       </div>
     </div>
   );
