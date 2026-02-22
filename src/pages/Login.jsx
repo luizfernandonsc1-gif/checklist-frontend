@@ -27,7 +27,7 @@ export default function Login() {
   return (
     <div className="login-wrapper">
       <div className="login-box">
-        <h1>🌿 Boticario</h1>
+        <h1>💎 Boticario</h1>
         <p>Faca login para acessar o sistema de checklists.</p>
 
         {error && <div className="error-msg">{error}</div>}
