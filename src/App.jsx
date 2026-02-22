@@ -8,6 +8,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminChecklists from './pages/admin/Checklists';
 import ChecklistForm from './pages/admin/ChecklistForm';
 import Responses from './pages/admin/Responses';
+import Usuarios from './pages/admin/Usuarios';
+import UsuarioForm from './pages/admin/UsuarioForm';
 import LojaDashboard from './pages/loja/Dashboard';
 import ChecklistFill from './pages/loja/ChecklistFill';
 
@@ -18,12 +20,17 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
+          {/* Admin */}
           <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin/checklists" element={<ProtectedRoute role="admin"><AdminChecklists /></ProtectedRoute>} />
           <Route path="/admin/checklists/novo" element={<ProtectedRoute role="admin"><ChecklistForm /></ProtectedRoute>} />
           <Route path="/admin/checklists/:id/editar" element={<ProtectedRoute role="admin"><ChecklistForm /></ProtectedRoute>} />
           <Route path="/admin/responses" element={<ProtectedRoute role="admin"><Responses /></ProtectedRoute>} />
+          <Route path="/admin/usuarios" element={<ProtectedRoute role="admin"><Usuarios /></ProtectedRoute>} />
+          <Route path="/admin/usuarios/novo" element={<ProtectedRoute role="admin"><UsuarioForm /></ProtectedRoute>} />
+          <Route path="/admin/usuarios/:id/editar" element={<ProtectedRoute role="admin"><UsuarioForm /></ProtectedRoute>} />
 
+          {/* Loja */}
           <Route path="/loja" element={<ProtectedRoute role="loja"><LojaDashboard /></ProtectedRoute>} />
           <Route path="/loja/checklist/:id" element={<ProtectedRoute role="loja"><ChecklistFill /></ProtectedRoute>} />
 
