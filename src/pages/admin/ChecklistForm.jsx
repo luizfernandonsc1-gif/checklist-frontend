@@ -13,6 +13,7 @@ export default function ChecklistForm() {
   const [isGlobal, setIsGlobal] = useState(true);
   const [lojas, setLojas] = useState([]);
   const [selectedLojas, setSelectedLojas] = useState([]);
+  const [recurrence, setRecurrence] = useState('none');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,6 +25,7 @@ export default function ChecklistForm() {
         setItems(r.data.items.map(i => i.text));
         setIsGlobal(Number(r.data.is_global) === 1);
         setSelectedLojas(r.data.assigned_lojas || []);
+        setRecurrence(r.data.recurrence || 'none');
       });
     }
   }, [id]);
@@ -53,6 +55,7 @@ export default function ChecklistForm() {
         items: cleanItems,
         is_global: isGlobal,
         assigned_lojas: isGlobal ? [] : selectedLojas,
+        recurrence,
       };
       if (isEdit) {
         await api.put(`/checklists/${id}`, payload);
@@ -89,22 +92,24 @@ export default function ChecklistForm() {
           </div>
 
           <div className="form-group">
+            <label>Recorrencia</label>
+            <select value={recurrence} onChange={e => setRecurrence(e.target.value)}>
+              <option value="none">Sem recorrencia (unico)</option>
+              <option value="daily">Diario</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensal</option>
+            </select>
+          </div>
+
+          <div className="form-group">
             <label>Destinatario</label>
             <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  checked={isGlobal}
-                  onChange={() => setIsGlobal(true)}
-                />
+                <input type="radio" checked={isGlobal} onChange={() => setIsGlobal(true)} />
                 Todas as lojas
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  checked={!isGlobal}
-                  onChange={() => setIsGlobal(false)}
-                />
+                <input type="radio" checked={!isGlobal} onChange={() => setIsGlobal(false)} />
                 Lojas especificas
               </label>
             </div>
