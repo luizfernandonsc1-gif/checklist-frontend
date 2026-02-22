@@ -10,14 +10,20 @@ export default function ChecklistForm() {
 
   const [title, setTitle] = useState('');
   const [items, setItems] = useState(['']);
+  const [isGlobal, setIsGlobal] = useState(true);
+  const [lojas, setLojas] = useState([]);
+  const [selectedLojas, setSelectedLojas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    api.get('/checklists/lojas').then(r => setLojas(r.data));
     if (isEdit) {
       api.get(`/checklists/${id}`).then(r => {
         setTitle(r.data.title);
         setItems(r.data.items.map(i => i.text));
+        setIsGlobal(Number(r.data.is_global) === 1);
+        setSelectedLojas(r.data.assigned_lojas || []);
       });
     }
   }, [id]);
@@ -26,19 +32,32 @@ export default function ChecklistForm() {
   const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
   const updateItem = (idx, val) => setItems(items.map((it, i) => i === idx ? val : it));
 
+  const toggleLoja = (lojaId) => {
+    setSelectedLojas(prev =>
+      prev.includes(lojaId) ? prev.filter(id => id !== lojaId) : [...prev, lojaId]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const cleanItems = items.filter(i => i.trim());
     if (!title.trim()) return setError('Titulo e obrigatorio.');
     if (cleanItems.length === 0) return setError('Adicione pelo menos um item.');
+    if (!isGlobal && selectedLojas.length === 0) return setError('Selecione pelo menos uma loja.');
 
     setLoading(true);
     try {
+      const payload = {
+        title,
+        items: cleanItems,
+        is_global: isGlobal,
+        assigned_lojas: isGlobal ? [] : selectedLojas,
+      };
       if (isEdit) {
-        await api.put(`/checklists/${id}`, { title, items: cleanItems });
+        await api.put(`/checklists/${id}`, payload);
       } else {
-        await api.post('/checklists', { title, items: cleanItems });
+        await api.post('/checklists', payload);
       }
       navigate('/admin/checklists');
     } catch (err) {
@@ -68,6 +87,46 @@ export default function ChecklistForm() {
               placeholder="Ex: Checklist de Abertura"
             />
           </div>
+
+          <div className="form-group">
+            <label>Destinatario</label>
+            <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  checked={isGlobal}
+                  onChange={() => setIsGlobal(true)}
+                />
+                Todas as lojas
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  checked={!isGlobal}
+                  onChange={() => setIsGlobal(false)}
+                />
+                Lojas especificas
+              </label>
+            </div>
+          </div>
+
+          {!isGlobal && (
+            <div className="form-group">
+              <label>Selecione as lojas</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                {lojas.map(loja => (
+                  <label key={loja.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 12px', border: '1.5px solid #D1D5DB', borderRadius: 8, background: selectedLojas.includes(Number(loja.id)) ? '#E8F5F0' : '#fff' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedLojas.includes(Number(loja.id))}
+                      onChange={() => toggleLoja(Number(loja.id))}
+                    />
+                    {loja.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="form-group">
             <label>Itens</label>
