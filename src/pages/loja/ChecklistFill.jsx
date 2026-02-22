@@ -1,69 +1,150 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../api/axios';
-import { useAuth } from '../../context/AuthContext';
 
-export default function LojaDashboard() {
-  const { user } = useAuth();
-  const [checklists, setChecklists] = useState([]);
-  const [myResponses, setMyResponses] = useState([]);
+export default function ChecklistFill() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [checklist, setChecklist] = useState(null);
+  const [checks, setChecks] = useState({});
+  const [status, setStatus] = useState('not_started');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    api.get('/checklists').then(r => setChecklists(r.data));
-    api.get('/responses/my').then(r => setMyResponses(r.data));
-  }, []);
+    Promise.all([
+      api.get(`/checklists/${id}`),
+      api.get(`/responses/${id}/mine`),
+    ]).then(([clRes, respRes]) => {
+      setChecklist(clRes.data);
+      if (respRes.data) {
+        setStatus(respRes.data.status);
+        const init = {};
+        respRes.data.items?.forEach(i => { init[i.item_id] = !!i.checked; });
+        setChecks(init);
+      }
+    });
+  }, [id]);
 
-  const getStatus = (clId) => myResponses.find(r => r.checklist_id === clId);
+  const toggle = (itemId) => {
+    if (status === 'completed') return;
+    setChecks(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+  };
+
+  const buildPayload = () =>
+    checklist.items.map(i => ({ item_id: i.id, checked: !!checks[i.id] }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg('');
+    try {
+      await api.post(`/responses/${id}/save`, { items: buildPayload() });
+      setStatus('pending');
+      setMsg('Progresso salvo!');
+    } catch (e) {
+      setMsg(e.response?.data?.message || 'Erro ao salvar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!confirm('Confirmar envio? Apos isso nao sera possivel editar.')) return;
+    setSaving(true);
+    setMsg('');
+    try {
+      await api.post(`/responses/${id}/save`, { items: buildPayload() });
+      await api.post(`/responses/${id}/complete`);
+      setStatus('completed');
+      setMsg('Checklist concluido com sucesso!');
+    } catch (e) {
+      setMsg(e.response?.data?.message || 'Erro ao concluir.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!checklist) return <Layout><p>Carregando...</p></Layout>;
+
+  const total = checklist.items.length;
+  const done = checklist.items.filter(i => checks[i.id]).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
     <Layout>
       <div className="page-header">
         <div>
-          <h2>Ola, {user?.name} 👋</h2>
-          <p>Preencha os checklists atribuidos a sua loja.</p>
+          <h2>{checklist.title}</h2>
+          <p>{done}/{total} itens marcados</p>
         </div>
+        {status === 'completed' && (
+          <span className="badge badge-completed" style={{ fontSize: '.9rem', padding: '8px 16px' }}>
+            Concluido
+          </span>
+        )}
       </div>
 
-      {checklists.length === 0 ? (
-        <div className="empty-state">
-          <div className="icon">🌿</div>
-          <h3>Nenhum checklist disponivel</h3>
-          <p>Aguarde o administrador criar checklists para voce preencher.</p>
+      <div className="card" style={{ maxWidth: 640 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem', color: '#6B7280', marginBottom: 4 }}>
+            <span>Progresso</span><span>{pct}%</span>
+          </div>
+          <div className="progress-bar">
+            <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-2">
-          {checklists.map(cl => {
-            const resp = getStatus(cl.id);
-            const status = resp?.status || 'not_started';
-            return (
-              <div className="card" key={cl.id}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>{cl.title}</h3>
-                  <span className={`badge ${status === 'completed' ? 'badge-completed' : status === 'pending' ? 'badge-pending' : ''}`}
-                    style={status === 'not_started' ? { background: '#F3F4F6', color: '#6B7280' } : {}}>
-                    {status === 'completed' ? 'Concluido' : status === 'pending' ? 'Em andamento' : 'Nao iniciado'}
-                  </span>
-                </div>
-                <p className="text-muted" style={{ fontSize: '.8rem', marginBottom: 12 }}>
-                  {cl.items.length} item(s)
-                </p>
-                {resp?.completed_at && (
-                  <p style={{ fontSize: '.78rem', color: '#059669', marginBottom: 8 }}>
-                    Concluido em {new Date(resp.completed_at).toLocaleString('pt-BR')}
-                  </p>
-                )}
-                <Link
-                  to={`/loja/checklist/${cl.id}`}
-                  className={`btn btn-sm ${status === 'completed' ? 'btn-outline' : 'btn-primary'}`}
-                >
-                  {status === 'completed' ? 'Ver respostas' : status === 'pending' ? 'Continuar' : 'Iniciar'}
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-      )}
+
+        {checklist.items.map(item => (
+          <div
+            key={item.id}
+            className={`checklist-item ${checks[item.id] ? 'checked' : ''}`}
+            onClick={() => toggle(item.id)}
+            style={{ cursor: status === 'completed' ? 'default' : 'pointer' }}
+          >
+            <input
+              type="checkbox"
+              checked={!!checks[item.id]}
+              onChange={() => toggle(item.id)}
+              disabled={status === 'completed'}
+            />
+            <label style={{ cursor: 'inherit' }}>{item.text}</label>
+          </div>
+        ))}
+
+        {msg && (
+          <div style={{
+            marginTop: 16, padding: '10px 14px', borderRadius: 8,
+            background: msg.includes('Erro') ? '#FEE2E2' : '#D1FAE5',
+            color: msg.includes('Erro') ? '#991B1B' : '#065F46',
+            fontSize: '.875rem'
+          }}>
+            {msg}
+          </div>
+        )}
+
+        {status !== 'completed' && (
+          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+            <button className="btn btn-outline" onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar progresso'}
+            </button>
+            <button className="btn btn-primary" onClick={handleComplete} disabled={saving || done === 0}>
+              {saving ? 'Enviando...' : 'Concluir checklist'}
+            </button>
+          </div>
+        )}
+
+        {status !== 'completed' && (
+          <p style={{ marginTop: 12, fontSize: '.78rem', color: '#9CA3AF' }}>
+            Voce pode salvar o progresso e voltar depois. Ao concluir, nao sera possivel editar.
+          </p>
+        )}
+      </div>
+
+      <button className="btn btn-outline btn-sm mt-4" onClick={() => navigate('/loja')}>
+        Voltar
+      </button>
     </Layout>
   );
 }
