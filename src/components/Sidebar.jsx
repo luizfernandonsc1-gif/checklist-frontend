@@ -14,6 +14,7 @@ export default function Sidebar() {
     { to: '/admin', label: 'Dashboard', icon: '◈' },
     { to: '/admin/checklists', label: 'Checklists', icon: '☑' },
     { to: '/admin/responses', label: 'Respostas', icon: '📋' },
+    { to: '/admin/usuarios', label: 'Usuários', icon: '👥' },
   ];
 
   const lojaLinks = [
@@ -25,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <h1>🌿 Boticario</h1>
+        <h1>💎 Boticario</h1>
         <p>Sistema de Checklist</p>
       </div>
 
